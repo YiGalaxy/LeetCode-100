@@ -1175,3 +1175,323 @@ int subarraySum(vector<int>& nums, int k) {
 
 满足的计数，这样就把知道题目解决了，使用的就是前缀和和哈希表共同解决的
 
+## 11.滑动窗口最大值
+
+### 题目
+
+给你一个整数数组 `nums`，有一个大小为 `k` 的滑动窗口从数组的最左侧移动到数组的最右侧。你只可以看到在滑动窗口内的 `k` 个数字。滑动窗口每次只向右移动一位。
+
+返回 *滑动窗口中的最大值* 。
+
+ 
+
+**示例 1：**
+
+```
+输入：nums = [1,3,-1,-3,5,3,6,7], k = 3
+输出：[3,3,5,5,6,7]
+解释：
+滑动窗口的位置                最大值
+---------------               -----
+[1  3  -1] -3  5  3  6  7       3
+ 1 [3  -1  -3] 5  3  6  7       3
+ 1  3 [-1  -3  5] 3  6  7       5
+ 1  3  -1 [-3  5  3] 6  7       5
+ 1  3  -1  -3 [5  3  6] 7       6
+ 1  3  -1  -3  5 [3  6  7]      7
+```
+
+**示例 2：**
+
+```
+输入：nums = [1], k = 1
+输出：[1]
+```
+
+ 
+
+**提示：**
+
+- `1 <= nums.length <= 105`
+- `-104 <= nums[i] <= 104`
+- `1 <= k <= nums.length`
+
+
+
+###解析
+
+看到这道题时的第一思路也很简单啊，就是对窗口内的数字进行大小比较即可，我们首先来实现一下这个思路
+
+```c++
+   vector<int> maxSlidingWindow(vector<int>& nums, int k) {
+        vector<int> res;
+        int l = 0;
+        int r = k - 1;
+
+        while(r < nums.size()){
+            int max = nums[l];
+            for(int i = l + 1; i <= r; i++){
+                if(nums[i] > max){
+                    max = nums[i];
+                }
+            }
+            res.push_back(max);
+            l++;
+            r++;
+        }
+        return res;
+    }
+```
+
+尽管这样确实能实现，但是时间花的就很多了，时间复杂度为**O(n*k)**，提交LeetCode也是会报超时错误。
+
+所以我们应该怎么来优化呢？
+
+我们可以使用双端队列，也叫做单调队列来完成
+
+```c++
+vector<int> maxSlidingWindow(vector<int>& nums, int k) {
+    vector<int> res;
+    // 双端队列：存储元素下标，对应数值单调递减
+    deque<int> q; 
+
+    for (int i = 0; i < nums.size(); ++i) {
+        // 1. 移除队列中 超出窗口左边界 的元素
+        while (!q.empty() && q.front() < i - k + 1) {
+            q.pop_front();
+        }
+
+        // 2. 维护单调递减：移除队列尾部比当前元素小的值
+        while (!q.empty() && nums[q.back()] < nums[i]) {
+            q.pop_back();
+        }
+
+        // 3. 当前元素下标入队
+        q.push_back(i);
+
+        // 4. 窗口形成后，记录队首（最大值）
+        if (i >= k - 1) {
+            res.push_back(nums[q.front()]);
+        }
+    }
+    return res;
+}
+```
+
+其实这里除了使用STL里面的deque，还可以自己写个静态数组来模拟
+
+```c++
+ vector<int> maxSlidingWindow(vector<int>& nums, int k) {
+    int n = nums.size();   // 数组长度
+    int head = 0, tail = 0;// 队头、队尾指针
+    int q[n];              // 用数组模拟队列
+    vector<int> ans;       // 存答案
+
+    for(int i = 0; i < n; i++){  // i 是窗口右边界
+
+        // 1. 如果队头已经滑出窗口 → 删掉
+        if(q[head] == i - k) head++;
+
+        // 2. 队尾比当前数小 → 全部删掉（保持递减）
+        while(head < tail && nums[q[tail - 1]] <= nums[i]) 
+            tail--;
+
+        // 3. 把当前下标加入队尾
+        q[tail++] = i;
+
+        // 4. 窗口形成 → 队头就是最大值
+        if(i >= k - 1) 
+            ans.push_back(nums[q[head]]);
+    }
+    return ans;
+}
+```
+
+这样又能快一些，因为这里使用静态数组是用的连续的存储空间，而使用deque是链表，是不连续的存储空间
+
+那么还有能够解决的方式吗？
+
+有的，兄弟。
+
+```c++
+vector<int> maxSlidingWindow(vector<int>& nums, int k) {
+    int n = nums.size();
+    vector<int> prefixMax(n), suffixMax(n);
+
+    //求前缀最大值（块内从左到右）
+    for (int i = 0; i < n; ++i) {
+        if (i % k == 0) {
+            prefixMax[i] = nums[i];   // 新块开始
+        } else {
+            prefixMax[i] = max(prefixMax[i-1], nums[i]);
+        }
+    }
+
+    // 求后缀最大值（块内从右到左）
+    for (int i = n-1; i >= 0; --i) {
+        if (i == n-1 || (i+1) % k == 0) {
+            suffixMax[i] = nums[i];   // 新块结束
+        } else {
+            suffixMax[i] = max(suffixMax[i+1], nums[i]);
+        }
+    }
+
+    //计算答案 
+    vector<int> ans;
+    for (int i = 0; i <= n-k; ++i) {
+        ans.push_back( max( suffixMax[i], prefixMax[i+k-1] ) );
+    }
+
+    return ans;
+}
+```
+
+这种滑动窗口，我们很容易就知道这个窗口最多也就跨了两个块，这个块就是一个窗口的大小，那么就可以仅针对于这两个块来找出最大值就可以了，
+
+上面代码所属前缀最大值和后缀最大值的意思也很好理解，一个值从前往后找出最大的，一个则是从后往前，可为什么要这样呢，举个例子就好理解了
+
+下标：0  1  2 | 3  4  5 | 6  7
+
+ 数值：1  3 -1 |-3  5  3 | 6  7
+
+k=3，我们在这里举例的时候先把它分一下块，
+
+计算前缀最大值数组
+
+i=0 → 0%3==0 → prefixMax[0]=1 
+
+i=1 → max(1,3)=3 
+
+i=2 → max(3,-1)=3 
+
+i=3 → 3%3==0 → -3
+
+i=4 → max(-3,5)=5 
+
+i=5 → max(5,3)=5 
+
+i=6 → 6%3==0 →6
+
+ i=7 → max(6,7)=7
+
+就得到了一个对应下标下的前缀最大值数组
+
+prefixMax = [1,3,3, -3,5,5, 6,7]
+
+同样的道理倒过来计算，就有了后缀最大值数组
+
+suffixMax = [3,3,-1, 5,5,3, 7,7]
+
+有了这两个之后，我们来看一下第一个窗口，也就是[1,3,-1]
+
+我们一眼就能看出来是3
+
+从两个数组来看呢，比较窗口开头下标对应的后缀最大值数组的对应值和窗口末尾下标对应的前缀最大值数组的对应值。
+
+我们发现是不是比较结果也是3
+
+这是因为前缀和后缀正好在窗口内做了个交叉，把最大的部分放在了各自的开头和末尾，这样就正好比较这两数就可以判断出来这一个窗口里的最大值了
+
+
+
+## 12.最小覆盖子串
+
+### 题目
+
+给定两个字符串 `s` 和 `t`，长度分别是 `m` 和 `n`，返回 s 中的 **最短窗口 子串**，使得该子串包含 `t` 中的每一个字符（**包括重复字符**）。如果没有这样的子串，返回空字符串 `""`。
+
+测试用例保证答案唯一。
+
+ 
+
+**示例 1：**
+
+```
+输入：s = "ADOBECODEBANC", t = "ABC"
+输出："BANC"
+解释：最小覆盖子串 "BANC" 包含来自字符串 t 的 'A'、'B' 和 'C'。
+```
+
+**示例 2：**
+
+```
+输入：s = "a", t = "a"
+输出："a"
+解释：整个字符串 s 是最小覆盖子串。
+```
+
+**示例 3:**
+
+```
+输入: s = "a", t = "aa"
+输出: ""
+解释: t 中两个字符 'a' 均应包含在 s 的子串中，
+因此没有符合条件的子字符串，返回空字符串。
+```
+
+ 
+
+**提示：**
+
+- `m == s.length`
+- `n == t.length`
+- `1 <= m, n <= 105`
+- `s` 和 `t` 由英文字母组成
+
+ 
+
+**进阶：**你能设计一个在 `O(m + n)` 时间内解决此问题的算法吗？
+
+###解析
+
+经过前面题的学习，我们对于找子串的思路也就是滑动窗口加上哈希计数
+
+所以有以下代码实现
+
+```c++
+ string minWindow(string s, string t) {
+        // 题目提到只有英文字母组成，所以说我们依然可以采用转换为ASCII码来计数
+        vector<int> need(128, 0);
+        vector<int> window(128, 0);
+        
+        //统计t需要的字符数量
+        for (char c : t) need[c]++;
+        
+        int left = 0, right = 0;
+        int count = 0;        // 满足数量的字符种类
+        int needKind = 0;     // t一共有多少种不同字符
+        int start = 0, len = 1e9; // 记录最优子串起点，长度找个大的值方便后续进行第一次比较
+
+        // 统计t的字符种类
+        for (int i = 0; i < 128; i++)
+            if (need[i] > 0) needKind++;
+
+        while (right < s.size()) {
+            char c = s[right];
+            window[c]++;
+
+            // 当前字符数量刚好达标 → 合法种类+1
+            if (need[c] != 0 && window[c] == need[c])
+                count++;
+
+            // 窗口合法：全部字符都满足，开始收缩左边界
+            while (count == needKind) {
+                // 更新最小子串
+                if (right - left + 1 < len) {
+                    len = right - left + 1;
+                    start = left;
+                }
+
+                // 左指针右移，移出字符
+                char d = s[left];
+                if (need[d] != 0 && window[d] == need[d])
+                    count--; // 不满足了，合法种类-1
+                window[d]--;
+                left++;
+            }
+            right++;
+        }
+        return len == 1e9 ? "" : s.substr(start, len);
+    }
+```
+
