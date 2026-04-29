@@ -1495,3 +1495,205 @@ suffixMax = [3,3,-1, 5,5,3, 7,7]
     }
 ```
 
+## 13.最大子数组和
+
+### 题目
+
+给你一个整数数组 `nums` ，请你找出一个具有最大和的连续子数组（子数组最少包含一个元素），返回其最大和。
+
+**子数组**是数组中的一个连续部分。
+
+ 
+
+**示例 1：**
+
+```
+输入：nums = [-2,1,-3,4,-1,2,1,-5,4]
+输出：6
+解释：连续子数组 [4,-1,2,1] 的和最大，为 6 。
+```
+
+**示例 2：**
+
+```
+输入：nums = [1]
+输出：1
+```
+
+**示例 3：**
+
+```
+输入：nums = [5,4,-1,7,8]
+输出：23
+```
+
+ 
+
+**提示：**
+
+- `1 <= nums.length <= 105`
+- `-104 <= nums[i] <= 104`
+
+ 
+
+**进阶：**如果你已经实现复杂度为 `O(n)` 的解法，尝试使用更为精妙的 **分治法** 求解。
+
+### 解析
+
+这道题有个经典的算法来解决它，就是kadane算法。
+
+Kadane 算法，就是数学家 **Joseph Kadane**，专门为**最大连续子数组和**这个经典问题，量身设计的线性解法。
+
+下面是代码实现
+
+```c++
+int maxSubArray(vector<int>& nums) {
+        int cur = nums[0];//以当前这个数为结尾的最大连续子数组和
+        int res = nums[0];//全局历史最大值，全程记录整段数组里答案
+        for(int i = 1; i < nums.size(); ++i)
+        {
+            cur = max(nums[i], cur + nums[i]);//比较以这个数字为开头和连接这个数字带来的最大和谁更大，这是一种贪心的思想
+            res = max(res, cur);
+        }
+        return res;
+    }
+```
+
+我们依然可以用分治法来解决这个问题
+
+```c++
+ int maxSubArray(vector<int>& nums) {
+        // 调用分治函数，范围：整个数组 0 ~ nums.size()-1
+        return divide(nums, 0, nums.size() - 1);
+    }
+
+    // 分治核心函数
+    // 求 nums[l ... r] 区间内的最大子数组和
+    int divide(vector<int>& nums, int l, int r) {
+        // 递归出口：区间只有一个数，最大和就是它自己
+        if (l == r) {
+            return nums[l];
+        }
+
+        //找中间点，把数组切成两半
+        int mid = (l + r) / 2;
+
+        //递归求三部分最大值
+        int leftMax = divide(nums, l, mid);            // 完全在左边
+        int rightMax = divide(nums, mid + 1, r);       // 完全在右边
+        int crossMax = getCrossMax(nums, l, mid, r);    // 横跨中间
+
+        //三个里面最大的就是答案
+        return max( max(leftMax, rightMax), crossMax );
+    }
+
+    //最关键：求【横跨 mid】的最大子数组和
+    //这种子数组一定包含 nums[mid] 和 nums[mid+1]
+    int getCrossMax(vector<int>& nums, int l, int mid, int r) {
+
+        // 第一步：从 mid 向左走，找最大后缀和
+        int leftSum = INT_MIN;  // 记录左边最大和
+        int curSum = 0;         // 临时累加
+
+        for (int i = mid; i >= l; i--) {
+            curSum += nums[i];          // 不断往左加
+            leftSum = max(leftSum, curSum); // 更新左边最大
+        }
+
+        // 第二步：从 mid+1 向右走，找最大前缀和
+        int rightSum = INT_MIN;
+        curSum = 0;
+
+        for (int i = mid + 1; i <= r; i++) {
+            curSum += nums[i];           // 不断往右加
+            rightSum = max(rightSum, curSum); // 更新右边最大
+        }
+        // 横跨中间的最大和 = 左边最大 + 右边最大
+        return leftSum + rightSum;
+    }
+```
+
+
+
+
+
+## 14.合并区间
+
+###题目
+
+以数组 `intervals` 表示若干个区间的集合，其中单个区间为 `intervals[i] = [starti, endi]` 。请你合并所有重叠的区间，并返回 *一个不重叠的区间数组，该数组需恰好覆盖输入中的所有区间* 。
+
+ 
+
+**示例 1：**
+
+```
+输入：intervals = [[1,3],[2,6],[8,10],[15,18]]
+输出：[[1,6],[8,10],[15,18]]
+解释：区间 [1,3] 和 [2,6] 重叠, 将它们合并为 [1,6].
+```
+
+**示例 2：**
+
+```
+输入：intervals = [[1,4],[4,5]]
+输出：[[1,5]]
+解释：区间 [1,4] 和 [4,5] 可被视为重叠区间。
+```
+
+**示例 3：**
+
+```
+输入：intervals = [[4,7],[1,4]]
+输出：[[1,7]]
+解释：区间 [1,4] 和 [4,7] 可被视为重叠区间。
+```
+
+ 
+
+**提示：**
+
+- `1 <= intervals.length <= 104`
+- `intervals[i].length == 2`
+- `0 <= starti <= endi <= 104`
+
+### 解析
+
+这道题也很好理解，本质就是依靠区间端点的数值大小进行判断，先将所有区间按照起始位置升序排序，让重叠区间彼此相邻，再依次遍历，比较当前区间起点与结果集中最后一个区间的终点，若当前起点小于等于该终点，说明区间重叠或连续，就合并更新最大右端点，若不满足则直接存入新区间，全程仅通过端点比较，即可完成所有区间的合并，最终输出无重叠的完整区间
+
+```c++
+  vector<vector<int>> merge(vector<vector<int>>& intervals) {
+        // 1. 先按区间【起点】从小到大排序（必须！）
+        sort(intervals.begin(), intervals.end());
+        
+        vector<vector<int>> res; // 存最终答案
+        
+        // 2. 遍历每一个区间
+        for(auto& interval : intervals) {
+            int start = interval[0];  // 当前区间起点
+            int end = interval[1];    // 当前区间终点
+            
+            // 如果结果为空，直接放进去
+            if(res.empty()) {
+                res.push_back(interval);
+            } 
+            else {
+                // 拿到结果里【最后一个区间】
+                auto& last = res.back();
+                int lastEnd = last[1];
+                
+                // 情况1：重叠/相连 → 合并
+                if(start <= lastEnd) {
+                    // 更新最后一个区间的结尾为最大值
+                    last[1] = max(lastEnd, end);
+                }
+                // 情况2：不重叠 → 直接加入
+                else {
+                    res.push_back(interval);
+                }
+            }
+        }
+        return res;
+    }
+```
+
