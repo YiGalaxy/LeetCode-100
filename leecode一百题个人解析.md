@@ -2197,3 +2197,145 @@ void setZeroes(vector<vector<int>>& matrix) {
 ```
 
 这也就是空间复杂度为O(1)的解法，自己用自己来做标记存储
+
+## 19.螺旋矩阵
+
+### 题目
+
+给你一个 `m` 行 `n` 列的矩阵 `matrix` ，请按照 **顺时针螺旋顺序** ，返回矩阵中的所有元素。
+
+ 
+
+**示例 1：**
+
+![img](https://assets.leetcode.com/uploads/2020/11/13/spiral1.jpg)
+
+```
+输入：matrix = [[1,2,3],[4,5,6],[7,8,9]]
+输出：[1,2,3,6,9,8,7,4,5]
+```
+
+**示例 2：**
+
+![img](https://assets.leetcode.com/uploads/2020/11/13/spiral.jpg)
+
+```
+输入：matrix = [[1,2,3,4],[5,6,7,8],[9,10,11,12]]
+输出：[1,2,3,4,8,12,11,10,9,5,6,7]
+```
+
+ 
+
+**提示：**
+
+- `m == matrix.length`
+- `n == matrix[i].length`
+- `1 <= m, n <= 10`
+- `-100 <= matrix[i][j] <= 100`
+
+### 解析
+
+这道题也很好理解和书写啊，就是绕着输出一遍就是了，我们就循着这个思路来写
+
+```c++
+vector<int> spiralOrder(vector<vector<int>>& matrix) {
+    	//首先，我们先拿到目标矩阵的长和宽
+        int m = matrix.size();
+        int n = matrix[0].size();
+
+        vector<int> result;
+    	//接下来我们来转圈
+    	//外层的for循环就是我们一共要转几圈，里面的for是来针对这个圈来输出的
+    	//这里的循环条件的(min(m, n) + 1) / 2，就是在计算圈数
+    	//取min是因为短边决定圈数
+    	//加1是为了向上取整，避免漏圈
+    	//除以2是因为每绕一圈，矩阵的短边长度会减少2，所以绕圈数就是短边长度减半（向上取整）。
+        for(int i = 0; i < (min(m, n) + 1) / 2; i++){
+            //这里是在绕圈的上边
+            for(int j = i; j < n - i; j++){
+                result.push_back(matrix[i][j]);
+            }
+            //这里是在绕圈的右边
+            for(int j = i + 1; j < m - i; j++){
+                result.push_back(matrix[j][n - i - 1]);
+            }
+            //下面的两个if都是用来防止重复的
+            if(m - i - 1 != i){
+                //绕下边
+                for(int j = n - i - 2; j >= i; j--){
+                    result.push_back(matrix[m - i - 1][j]);
+                }
+            }
+            if(n - i - 1 != i){
+                //绕左边
+                for(int j = m - i - 2; j > i; j--){
+                    result.push_back(matrix[j][i]);
+                }
+            }
+        }
+        return result;
+    }
+```
+
+##20.旋转图像
+
+### 题目
+
+给定一个 *n* × *n* 的二维矩阵 `matrix` 表示一个图像。请你将图像顺时针旋转 90 度。
+
+你必须在**[ 原地](https://baike.baidu.com/item/原地算法)** 旋转图像，这意味着你需要直接修改输入的二维矩阵。**请不要** 使用另一个矩阵来旋转图像。
+
+ 
+
+**示例 1：**
+
+![img](https://assets.leetcode.com/uploads/2020/08/28/mat1.jpg)
+
+```
+输入：matrix = [[1,2,3],[4,5,6],[7,8,9]]
+输出：[[7,4,1],[8,5,2],[9,6,3]]
+```
+
+**示例 2：**
+
+![img](https://assets.leetcode.com/uploads/2020/08/28/mat2.jpg)
+
+```
+输入：matrix = [[5,1,9,11],[2,4,8,10],[13,3,6,7],[15,14,12,16]]
+输出：[[15,13,2,5],[14,3,4,1],[12,6,8,9],[16,7,10,11]]
+```
+
+ 
+
+**提示：**
+
+- `n == matrix.length == matrix[i].length`
+- `1 <= n <= 20`
+- `-1000 <= matrix[i][j] <= 1000`
+
+ 
+
+### 解析
+
+```c++
+void rotate(vector<vector<int>>& matrix) {
+    int n = matrix.size();
+    for (int i = 0; i < (n + 1) / 2; i++) {
+        for (int j = 0; j < n / 2; j++) {
+            int temp = matrix[i][j];
+            matrix[i][j] = matrix[n - 1 - j][i];
+            matrix[n - 1 - j][i] = matrix[n - 1 - i][n - 1 - j];
+            matrix[n - 1 - i][n - 1 - j] = matrix[j][n - 1 - i];
+            matrix[j][n - 1 - i] = temp;
+        }
+    }
+}
+```
+
+我们在旋转的时候，往往可以只考虑一部分，例如这里的旋转90度，我们可以把整个矩阵分成四个部分，然后第一个部分旋转来到第二个部分，第二个部分的旋转来到第三个，由此连锁的移动就构成了旋转。
+
+不同奇偶边数的矩阵我们可以这么来处理
+
+**行数** `(n+1)/2`：偶数时等于 `n/2`，正好一半；奇数时多一行，用来处理中间那一行的左半边（中心点不需要动）。
+
+**列数** `n/2`：偶数时刚好左半边；奇数时向下取整，刚好不包括正中间那一列（中间列的中心也不用动）。
